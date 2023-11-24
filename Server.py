@@ -9,21 +9,20 @@ from socket import *
 from Crypto.Cipher import Salsa20
 
 # Dictionary to access all the User credentials
-
 user = {}
 
 
-class Server():
+class Server:
     def __init__(self, folder, sport):
         self.serverPort = int(sport)  # serverPort
         self.ServerPath = os.getcwd()
         self.folder = folder[1:]
-        self.user1 = ''
+        self.user1 = ""
 
     def create_socket(self):
         # Creating Socket
         self.serverSocket = socket(AF_INET, SOCK_STREAM)
-        self.serverSocket.bind(('', self.serverPort))
+        self.serverSocket.bind(("", self.serverPort))
         self.serverSocket.listen()
         print("Server running on " + str(self.serverPort))
         while 1:
@@ -36,10 +35,10 @@ class Server():
     def runReq(self, conn):
         print("@" * 60)
         req = conn.recv(100)
-        if req.decode() == 'upload':
+        if req.decode() == "upload":
             print("\t\tUPLOAD REQUEST")
             data1 = conn.recv(100)
-            data1 = data1.strip(b'-')
+            data1 = data1.strip(b"-")
             data = data1.decode()
             credentials = data.split("\n")
             name = credentials[0]
@@ -58,11 +57,11 @@ class Server():
             self.write2file(conn, data1)
             time.sleep(0.01)
             data2 = conn.recv(100)
-            data2 = data2.strip(b'-')
+            data2 = data2.strip(b"-")
             time.sleep(0.01)
             self.write2file(conn, data2)
 
-        if req.decode() == 'download':
+        if req.decode() == "download":
             print("\t\tDOWNLOAD REQUEST")
 
             request = conn.recv(50)
@@ -75,25 +74,31 @@ class Server():
                 conn.send("Error: No such User record present in the server".encode())
                 return
             # try:
-            sub = filename.split('/')
+            sub = filename.split("/")
             if len(sub) > 1:
                 if not os.path.isdir(self.folder + "//" + user + "//" + sub[0]):
                     os.mkdir(self.folder + "//" + user + "//" + sub[0])
                 subf = sub[0] + "//"
                 fname = sub[1]
             else:
-                subf = ''
+                subf = ""
                 fname = filename
             foundFlag = False
             for each in os.listdir(self.folder + "//" + user + "//" + subf):
                 if fnmatch.fnmatch(each, "." + fname + ".[0-4]"):
                     foundFlag = True
                     cipher1 = self.GetcipherKey(user)
-                    with open(self.folder + "//" + user + "//" + subf + each, 'rb') as fh:
+                    with open(
+                        self.folder + "//" + user + "//" + subf + each, "rb"
+                    ) as fh:
                         conn.send("File Found No Issues found".encode())
                         time.sleep(1)
                         lines = fh.readlines()
-                        print("File found: {} of size {} bytes".format(each, lines[0].decode().strip('\n')))
+                        print(
+                            "File found: {} of size {} bytes".format(
+                                each, lines[0].decode().strip("\n")
+                            )
+                        )
                         conn.send(lines[0])
                         time.sleep(0.1)
                         conn.send(lines[1])
@@ -106,26 +111,28 @@ class Server():
                             secret = self.encrypt1(data, cipher1)
                             conn.send(secret)
                             time.sleep(0.1)
-                            status = ''
+                            status = ""
                             Recv_ACK = False
                             while not Recv_ACK:
                                 try:
-                                    while status == '':
+                                    while status == "":
                                         status = conn.recv(1)
-                                    print("Sending: " + str(int((BytesToSend / int(lines[0])) * 100)) + "%\r", end='')
+                                    print(
+                                        "Sending: "
+                                        + str(int((BytesToSend / int(lines[0])) * 100))
+                                        + "%\r",
+                                        end="",
+                                    )
                                     Recv_ACK = True
                                 except timeout:
                                     conn.send(secret)
                                     time.sleep(0.01)
                             BytesToSend = BytesToSend + 65000
-                        # time.sleep(1)
-            if (foundFlag == False):
+            if foundFlag == False:
                 conn.send("Error No File Found found".encode())
             print("Sending: 100%")
-            # except:
-            #    conn.send("Error occured at Server. Mostly File not found".encode())   
 
-        if req.decode() == 'list':
+        if req.decode() == "list":
             filelist = {}
             print("\tLIST REQUEST")
             request = conn.recv(50)
@@ -150,7 +157,7 @@ class Server():
                         filelist[name] = part
                     else:
                         filelist[name] = filelist[name] + "," + part
-            flist = ''
+            flist = ""
             for key, value in filelist.items():
                 flist = flist + key + " " + str(value) + "\n"
             conn.send("Sending the List now".encode())
@@ -159,8 +166,6 @@ class Server():
             time.sleep(0.1)
 
         print("~" * 60)
-        # except:
-        #    print("Socket Error occured")    
 
     def write2file(self, conn, data1):
         data = data1.decode()
@@ -171,23 +176,23 @@ class Server():
         part = details[3]
         length = details[4]
 
-        # try
-
         print("User: {}".format(name))
         print("File Upload: {} part-{} Length-{}".format(fname, part, length))
 
         if not os.path.isdir(self.folder + "/" + name):
             os.makedirs(self.folder + "/" + name)
-        sub = fname.split('/')
+        sub = fname.split("/")
         if len(sub) > 1:
             if not os.path.isdir(self.folder + "//" + name + "//" + sub[0]):
                 os.mkdir(self.folder + "//" + name + "//" + sub[0])
             subf = sub[0] + "//"
             fname = sub[1]
         else:
-            subf = ''
+            subf = ""
         received = 0
-        with open(self.folder + "//" + name + "//" + subf + "." + fname + "." + part, 'wb') as fh:
+        with open(
+            self.folder + "//" + name + "//" + subf + "." + fname + "." + part, "wb"
+        ) as fh:
             fh.write((length + "\n").encode())
             fh.write((part + "\n").encode())
 
@@ -199,9 +204,6 @@ class Server():
                 fh.write(decryptData)
                 received = received + len(content2) - 8
         print("Upload Complete")
-        # except:
-        #    print("Error occuring during writing to a file")
-        # THIS MESSAGE MUST BE SENT BACK TO CLIENT
 
     def encrypt1(self, data, key1):
         encryption_suite = Salsa20.new(key1)
@@ -227,17 +229,15 @@ class Server():
 
     def GetUserDetails(self):
         try:
-            with open('ds.conf', 'r') as fh:
+            with open("ds.conf", "r") as fh:
                 lines = fh.readlines()
-                # scan across the file
                 for each in lines:
-                    # for every valid line
                     if each:
                         name, password = each.split()
                         user[name] = password
             print(user)
         except:
-            print("Valid Conf file is not present in the System")  # For now
+            print("Valid Conf file is not present in the System")
 
     def validateUser(self, name, password):
         if name in user.keys():
@@ -253,23 +253,31 @@ class Server():
         return user[name]
 
 
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     argparser = argparse.ArgumentParser(description="Server Hosting Program")
-    argparser.add_argument('Server_Folder', action='store', type=str, help=" Enter the Folder for the Server")
-    argparser.add_argument('ServerPort', action='store', type=int, help=" Enter the Port Number")
-    if (len(sys.argv) != 3):
-        print("Invalid arguements, you need to enter Folder and Part. program now exits")
+    argparser.add_argument(
+        "Server_Folder",
+        action="store",
+        type=str,
+        help=" Enter the Folder for the Server",
+    )
+    argparser.add_argument(
+        "ServerPort", action="store", type=int, help=" Enter the Port Number"
+    )
+    if len(sys.argv) != 3:
+        print("Invalid arguments, you need to enter Folder and Part. program now exits")
         sys.exit()
     args = argparser.parse_args()
-    # Get the Command Line arguements and pass to Server Class
+
+    # Get the Command Line arguments and pass to Server Class
     MyFolder = args.Server_Folder
     SPort = args.ServerPort
 
     if not os.path.isdir(MyFolder[1:]):
         os.mkdir(MyFolder[1:])
+
     server1 = Server(MyFolder, SPort)
 
-    # Fetch the User credentials before beginnning
+    # Fetch the User credentials before beginning
     server1.GetUserDetails()
     server1.create_socket()
